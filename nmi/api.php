@@ -88,16 +88,29 @@ class API
 
     public function urlFetch(array $params)
     {
+        //updated with ssl support, updates still to be tested.
         $data = http_build_query($params);
+        $url = parse_url(self::DIRECT_POST_API_URL);
+
         $context = stream_context_create(array(
             'http' => array(
+                'follow_location' => false,
                 'header'        => "Content-Type: application/x-www-form-urlencoded\r\nContentLength: " . strlen($data) . "\r\n",
-                'timeout'       => 60.0,
-                'ignore_errors' => true,
-                'method'        => 'POST',
-                'content'       => $data,
+                'timeout'         => 60.0,
+                'method'          => 'POST',
+                'content'         => $data
+            ),
+            'ssl'  => array(
+                'verify_peer'         => true,
+                'cafile'              => dirname(dirname(__FILE__)) . '/ssl/cert.pem',
+                'verify_depth'        => 5,
+                'CN_match'            => $url['host'],
+                'disable_compression' => true,
+                'SNI_enabled'         => true,
+                'ciphers'             => 'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:ECDHE-RSA-RC4-SHA:ECDHE-ECDSA-RC4-SHA:AES128:AES256:RC4-SHA:HIGH:!aNULL:!eNULL:!EXPORT:!DES:!3DES:!MD5:!PSK',
             ),
         ));
+
         return file_get_contents(self::DIRECT_POST_API_URL, false, $context);
     }
 
@@ -109,7 +122,7 @@ class API
         curl_setopt($ch, CURLOPT_TIMEOUT, 15);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_HEADER, 0);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
         curl_setopt($ch, CURLOPT_POST, 1);
         if (($response = curl_exec($ch)) === false) {
